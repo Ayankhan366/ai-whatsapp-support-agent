@@ -1,0 +1,402 @@
+{
+  "name": "AI Agent workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.messages[0].text.body }}",
+        "options": {
+          "systemMessage": "You are a helpful Whatsapp support agent. your functions are to respond to user queries by retrieving data from supabase tool. keep the answers short and relevant. At any point, if the answer isn't available in retrieved data, just reply \"one of our team member will assist you on this\"."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -144,
+        192
+      ],
+      "id": "99bed296-3855-4d89-b983-f30539cfa775",
+      "name": "AI Summary Agent",
+      "notesInFlow": true,
+      "notes": "Double-click to open"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        192
+      ],
+      "id": "78be1238-bac8-4f2f-957c-073237d463d5",
+      "name": "WhatsApp Trigger",
+      "webhookId": "5be4c8fa-a513-4885-af71-6f4ef35c21b2",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "fq88WyxGHk8oE4OD",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        400
+      ],
+      "id": "fb4d0135-3fc8-4745-afe7-d3888227875b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YVF5C3sVqFGEZOWH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UyyK6KAB2cCxpAy4msQOara6jgtN2TaqJCamKwnmVkQ",
+          "mode": "list",
+          "cachedResultName": "rag sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UyyK6KAB2cCxpAy4msQOara6jgtN2TaqJCamKwnmVkQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "product_info",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UyyK6KAB2cCxpAy4msQOara6jgtN2TaqJCamKwnmVkQ/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        368
+      ],
+      "id": "53f497fc-bcf7-4350-942d-62e7e5501958",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "jxnkZcowVxHgukMb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n    const data = item.json;\n    let content = \"\";\n\n    if (data.Question && data.Answer) {\n        // FAQ\n        content = `${data.Answer}`;\n    } else if (data['Product Name'] && data.Description) {\n        // Product\n        content = `Product\\nCategory: ${data.Category || \"General\"}\\nName: ${data['Product Name']}\\nDescription: ${data.Description}\\nSize: ${data.Size || \"N/A\"}\\nPrice: ${data.Price || \"N/A\"}`;\n    } else {\n        // Fallback\n        content = `Other Data\\n${JSON.stringify(data)}`;\n    }\n\n    return {\n        json: {\n            values: [],        // embedding node will fill this\n            content: content   // EVERYTHING is now vectorized\n        }\n    };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        288
+      ],
+      "id": "1722927d-9d3a-4628-a2e3-426f18a91b54",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        880,
+        128
+      ],
+      "id": "fc9c541b-ada5-4d27-b5a7-4cafadd9bd33",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Ex48nkTnoGKeKSVF",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        368
+      ],
+      "id": "4180db57-98df-474f-874a-66d482d47a91",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        896,
+        384
+      ],
+      "id": "d415cea6-a53c-429e-87a9-aa046c13ec83",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YVF5C3sVqFGEZOWH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Call this tool to fetch general FAQs and product info",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        16,
+        464
+      ],
+      "id": "42132980-f855-4c66-8302-5ab49b7a47ee",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Ex48nkTnoGKeKSVF",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        576
+      ],
+      "id": "a31a4195-21c3-49d2-97be-6982f3f3e3ec",
+      "name": "Embeddings Google Gemini1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YVF5C3sVqFGEZOWH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "906625315857243",
+        "recipientPhoneNumber": "+91 79990 50116",
+        "textBody": "hello",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        192
+      ],
+      "id": "79c6ade0-14cd-47a5-8305-f41fb58e249c",
+      "name": "Send message and wait for response",
+      "webhookId": "036e1593-2cc0-45c5-a320-7e7656c66d45",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "1yrc85jQQ0uq9PEx",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.contacts[0].wa_id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -112,
+        432
+      ],
+      "id": "f29c4d6a-6a15-4534-afd3-5ae635e3642b",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "99dIwBnUkEZXdGdx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        352,
+        480
+      ],
+      "id": "72470c54-8030-46c2-b3bb-476131752b37",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "aNbEYJo9ai7HbAEU",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Summary Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Summary Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Summary Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Summary Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Summary Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "f4d48a92-5cbe-4c0d-b3f4-23f9b316d46d",
+  "meta": {
+    "templateId": "ready-to-run-ai-workflow-v3",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8db730e2904b659547e6247316196eea2a6db653574adaede2e147efa219f59b"
+  },
+  "id": "uHyUSiLfEvEiX7Sa",
+  "tags": []
+}
